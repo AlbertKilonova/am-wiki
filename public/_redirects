@@ -1,4 +1,0 @@
-# hash 路由本身不需要回退；这里只兜住直接访问的非 hash 路径，避免 404 断链。
-/cms        /index.html  200
-/post/*     /index.html  200
-/index      /index.html  200
