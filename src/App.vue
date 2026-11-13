@@ -56,7 +56,7 @@ function openPost(id) {
   <header class="masthead">
     <div class="masthead-inner">
       <router-link to="/" class="brand">
-        Alight Motion<span class="amex">®</span>
+        Alight Motion
         <span class="wiki">WIKI</span>
       </router-link>
 
@@ -114,7 +114,7 @@ function openPost(id) {
 
   <footer>
     <div class="footer-inner">
-      <span>AlightMotionWiki <span class="accent">/</span> Community Maintained</span>
+      <span>AlightMotionWiki <span class="accent">/</span> 非官方社区 · Community Maintained</span>
       <span>
         <router-link :to="{ name: 'cms' }" class="footer-link">CMS</router-link>
         <span class="accent"> / </span>Swiss&nbsp;International&nbsp;Type
