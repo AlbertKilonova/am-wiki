@@ -1,10 +1,11 @@
 # AlightMotionWiki · 纯静态 Wiki + 无后端 CMS
 
 Vue 3 + Vite 单页应用，**没有后端、没有数据库**。
-文章是 `content/` 下的 Markdown，构建时打包进产物；编辑走「站内 CMS → GitHub PR → Actions 校验 → Cloudflare Pages 部署」。
+文章是 `content/` 下的 Markdown，构建时打包进产物；编辑走「站内 CMS → GitHub PR → Actions 校验」，合并后由 Cloudflare 自动构建上线。
 
-生产域名：**https://amw.mtga.top/**（Cloudflare Pages，自定义域）。
-发布手册：[docs/DEPLOY-cloudflare-pages.md](docs/DEPLOY-cloudflare-pages.md)。
+生产域名：**https://amw.mtga.top/**（Cloudflare Workers + Static Assets，自定义域）
+备用域名：https://am-wiki.albertkilonova.workers.dev
+发布手册：[docs/DEPLOY-cloudflare.md](docs/DEPLOY-cloudflare.md)
 
 ## 工作流
 
@@ -15,7 +16,7 @@ Vue 3 + Vite 单页应用，**没有后端、没有数据库**。
                                    │
 PR 打开 ──► ci.yml：校验 frontmatter + 构建（失败红叉，产物 dist-preview 留 7 天）
                                    │
-合并到 main ──► Cloudflare Pages 自动构建 → https://amw.mtga.top/
+合并到 main ──► Cloudflare Workers Builds 自动构建 → wrangler deploy → https://amw.mtga.top/
 ```
 
 ## 结构
@@ -27,9 +28,8 @@ am-wiki/
 │  ├─ 02-downloads/
 │  └─ 03-contributions/
 ├─ public/                      ← 原样拷进 dist 的静态资产
-│  ├─ _headers                  ← Cloudflare 响应头（安全头 + 缓存策略）
-│  ├─ _redirects                ← 直连 /cms、/post/* 时回退 index
-│  ├─ 404.html                  ← Pages 的 404 页
+│  ├─ _headers                  ← 响应头（安全头 + 缓存策略）
+│  ├─ 404.html                  ← 兜底页
 │  ├─ favicon.svg / robots.txt / sitemap.xml
 ├─ src/
 │  ├─ config.js                 仓库与站点配置（环境变量 VITE_REPO_* 覆盖）
@@ -41,35 +41,50 @@ am-wiki/
 │  └─ styles.css                瑞士国际主义 + 工业风 + 动效
 ├─ scripts/
 │  ├─ validate-content.mjs      frontmatter 校验（CI / 本地）
-│  └─ deploy-cloudflare.sh      直传发布（wrangler pages deploy）
+│  └─ deploy-cloudflare.sh      本地直传（wrangler deploy）
 ├─ .github/workflows/
 │  ├─ ci.yml                    PR：校验 + 构建 + 产物
-│  └─ deploy.yml                CF Pages 手动直传通道（Git 集成时不需要）
-├─ wrangler.toml                Pages 项目名 / 输出目录
+│  └─ deploy.yml                手动直传通道（Git 集成时不需要）
+├─ wrangler.toml                Worker 名 / [assets] 目录 / SPA 回退
 ├─ .env.example                 构建期环境变量样例
 ├─ build.sh                     手机上构建（借 /root/build 绕开 FUSE 符号链接）
 └─ dist/                        构建产物（含 public/ 拷入的 _headers 等）
 ```
 
-## 发布（Cloudflare Pages）
+## 发布（Cloudflare Workers + Static Assets）
 
-**A. Git 集成（推荐）**：Pages → Connect to Git，构建命令 `pnpm build`、输出目录 `dist`，环境变量：
+线上项目名 **am-wiki**，Git 集成模式：push 到 `main` 触发 Workers Builds。
 
 ```
-VITE_REPO_OWNER  = <你的 GitHub 用户名>
-VITE_REPO_NAME   = am-wiki
-VITE_REPO_BRANCH = main
-VITE_SITE_URL    = https://amw.mtga.top/
-NODE_VERSION     = 20
+构建命令   pnpm run build
+部署命令   npx wrangler deploy
+根目录     /
+构建变量   VITE_REPO_NAME=am-wiki
+          VITE_REPO_OWNER=AlbertKilonova
 ```
 
-**B. 直传**：`CLOUDFLARE_API_TOKEN=... pnpm run deploy`（等价 `npx wrangler pages deploy dist --project-name am-wiki --branch main`）。
+`wrangler.toml` 关键段：
 
-自定义域 `amw.mtga.top` 在 Pages → Custom domains 添加；DNS 在 Cloudflare 时自动写入 CNAME `amw → am-wiki.pages.dev`。
+```toml
+name = "am-wiki"
+compatibility_date = "2026-11-01"
 
-环境变量是**构建期**变量，改完要重新部署才生效。未设置 `VITE_REPO_*` 时站点照常浏览，`#/cms` 会显示 `REPO_NOT_SET` 提示条。
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+```
 
-> 仍用 GitHub Pages 时：把 `vite.config.js` 的 `base` 改回 `'./'`，并把 `deploy.yml` 换回 Pages 版本；仓库 Settings → Pages → Source 选 GitHub Actions。
+> 为什么不是 Pages：本项目在 CF 面板里建为 Workers 项目，Pages 的构建令牌调
+> `/pages/projects/...` 会返回 `Authentication error [code: 10000]`；改用 `[assets]` +
+> `wrangler deploy` 后部署通过。若要回到 Pages，把 `[assets]` 换成
+> `pages_build_output_dir = "dist"` 并用 `pnpm run deploy:pages`。
+
+**本地直传**：`CLOUDFLARE_API_TOKEN=... pnpm run deploy`（= `wrangler deploy`）。
+**Pages 备选**：`pnpm run deploy:pages`（= `wrangler pages deploy dist --project-name am-wiki`）。
+
+自定义域 `amw.mtga.top` 在项目「域 → 添加域名 → mtga.top → 子域 amw」绑定，CF 自动写 DNS 记录与证书。
+
+环境变量是**构建期**变量，改完要重新构建才生效。未设置 `VITE_REPO_*` 时站点照常浏览，`#/cms` 会显示 `REPO_NOT_SET` 提示条。
 
 ## 加文章（三种方式）
 
@@ -114,8 +129,9 @@ GitHub → Settings → Developer settings → **Fine-grained tokens** → 只�
 ```sh
 pnpm install
 pnpm run validate     # 校验 content/*.md
-pnpm run build        # → dist/（含 _headers、_redirects、404.html）
+pnpm run build        # → dist/（含 _headers、404.html）
 pnpm run preview      # vite preview
+npx wrangler deploy --dry-run   # 只校验 Worker 配置，不上传
 python -m http.server 8899 --bind 127.0.0.1 --directory dist
 ```
 
@@ -124,7 +140,7 @@ python -m http.server 8899 --bind 127.0.0.1 --directory dist
 ## 已知取舍
 
 - 内容改动必须走 PR（这是设计目标，不是缺陷）
-- 没有 PR 预览部署（Cloudflare Pages 自带分支预览域，可用 `<branch>.am-wiki.pages.dev`）
+- 没有 PR 预览部署（Workers 有 `*-am-wiki.albertkilonova.workers.dev` 预览域，但本项目未启用分支预览）
 - 图片用外链图床，不做仓库内上传
 - CMS 的文章列表来自构建时的快照；合并后重新构建即为最新
-- `_headers` / `_redirects` 只在 Cloudflare 生效，本地静态服务器会忽略
+- `_headers` 由 Workers Static Assets 生效；路径回退交给 `not_found_handling = "single-page-application"`（`_redirects` 会与它冲突，已移除）
