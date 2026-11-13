@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { categories, searchPosts } from './data/posts'
+import { categories, getPost, searchPosts } from './data/posts'
 
 const router = useRouter()
 const route = useRoute()
@@ -11,21 +11,21 @@ const keyword = ref('')
 const results = computed(() => searchPosts(keyword.value))
 
 const activeTab = computed(() => {
+  if (route.name === 'downloads' || route.name === 'cms-downloads') return 'downloads'
+  if (route.name === 'post') return getPost(route.params.id)?.category || null
+  if (route.name === 'cms') return 'contributions'
+  if (route.name !== 'home') return null
   const t = route.query.tab
   return categories.some((c) => c.id === t) ? t : 'tutorial'
 })
 
-const onDownloads = computed(() => route.name === 'downloads')
-
-function navTo(id) {
-  keyword.value = ''
-  // 「下载」是独立页面（卡片列表），不是文章分类流
-  if (id === 'downloads') {
-    router.push({ name: 'downloads' })
-    return
-  }
-  router.push({ name: 'home', query: id === 'tutorial' ? {} : { tab: id } })
+function navTarget(id) {
+  return id === 'downloads'
+    ? { name: 'downloads' }
+    : { name: 'home', query: id === 'tutorial' ? {} : { tab: id } }
 }
+
+watch(() => route.fullPath, () => { keyword.value = '' })
 
 onMounted(() => {
   // 瑞士风格默认走纸白，除非用户自己切过
@@ -61,16 +61,17 @@ function openPost(id) {
       </router-link>
 
       <nav class="nav">
-        <a
+        <router-link
           v-for="(c, i) in categories"
           :key="c.id"
           class="nav-item"
-          :class="{ active: c.id === activeTab || (c.id === 'downloads' && onDownloads) }"
-          href="#"
-          @click.prevent="navTo(c.id)"
+          :class="{ active: c.id === activeTab }"
+          :aria-current="c.id === activeTab ? 'page' : undefined"
+          :to="navTarget(c.id)"
+          @click="keyword = ''"
         >
           <i>0{{ i + 1 }}</i>{{ c.label }}
-        </a>
+        </router-link>
       </nav>
 
       <div class="masthead-tools">

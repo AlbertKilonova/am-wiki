@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { categories, posts, postsByCategory } from '../data/posts'
 import { downloads } from '../data/downloads'
@@ -15,12 +15,12 @@ const active = computed(() => {
   return tabs.some((c) => c.id === t) ? t : 'tutorial'
 })
 
-onMounted(() => {
-  if (route.query.tab === 'downloads') router.replace({ name: 'downloads' })
-})
+watch(() => route.query.tab, (tab) => {
+  if (tab === 'downloads') router.replace({ name: 'downloads' })
+}, { immediate: true })
 
 const current = computed(() => tabs.find((c) => c.id === active.value))
-const index = computed(() => tabs.findIndex((c) => c.id === active.value) + 1)
+const index = computed(() => categories.findIndex((c) => c.id === active.value) + 1)
 const list = computed(() => postsByCategory(active.value))
 const countOf = (id) => posts.filter((p) => p.category === id).length
 const pad = (n) => String(n).padStart(2, '0')
