@@ -1379,3 +1379,258 @@ textarea:focus {
     text-align: left;
   }
 }
+
+/* ---------- 下载页（独立卡片流） ---------- */
+.dl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+  margin: 0 0 20px;
+  border-top: 1px solid var(--rule-soft);
+  border-left: 1px solid var(--rule-soft);
+}
+
+.dl-card {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--rule-soft);
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.dl-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-bottom: 1px solid var(--rule-soft);
+  background: var(--rule-soft);
+}
+
+.dl-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dl-thumb-fallback {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+}
+
+.dl-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 16px;
+}
+
+.dl-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dl-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.dl-summary {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+
+.dl-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule-soft);
+}
+
+.dl-get {
+  text-decoration: none;
+}
+
+.dl-pending {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.dl-date {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+
+.dl-note {
+  margin: 22px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+
+.inline-link {
+  margin-left: 6px;
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+
+.inline-link:hover {
+  border-bottom-width: 2px;
+}
+
+.meta-row-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.meta-row-link:hover span {
+  color: var(--accent);
+}
+
+/* ---------- 下载 CMS ---------- */
+.dlc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px 18px;
+}
+
+.dlc-wide {
+  grid-column: 1 / -1;
+}
+
+.dlc-token {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.dlc-token .input {
+  flex: 1 1 260px;
+  padding: 9px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  outline: none;
+}
+
+.dlc-token .input:focus {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.dlc-hint {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+
+.dlc-hint.is-ok {
+  color: var(--accent);
+}
+
+.dlc-hint.is-error {
+  color: #c62828;
+}
+
+.dlc-path {
+  margin: 14px 0 0;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.dlc-path code,
+.section-desc code {
+  padding: 0 4px;
+  border: 1px solid var(--rule-soft);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10.5px;
+}
+
+.dlc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.dlc-preview {
+  max-width: 320px;
+}
+
+.dlc-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule-soft);
+}
+
+.dlc-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 92px;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 6px;
+  border: 0;
+  border-bottom: 1px solid var(--rule-soft);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dlc-item:hover {
+  background: var(--rule-soft);
+}
+
+.dlc-item b {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.dlc-item span {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+
+.dlc-date {
+  text-align: right;
+}
+
+.dlc-empty {
+  padding: 14px 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+

@@ -1,17 +1,26 @@
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { categories, posts, postsByCategory } from '../data/posts'
+import { downloads } from '../data/downloads'
 
 const route = useRoute()
+const router = useRouter()
+
+// 下载是独立页面，首页不再有它的文章流
+const tabs = categories.filter((c) => c.id !== 'downloads')
 
 const active = computed(() => {
   const t = route.query.tab
-  return categories.some((c) => c.id === t) ? t : 'tutorial'
+  return tabs.some((c) => c.id === t) ? t : 'tutorial'
 })
 
-const current = computed(() => categories.find((c) => c.id === active.value))
-const index = computed(() => categories.findIndex((c) => c.id === active.value) + 1)
+onMounted(() => {
+  if (route.query.tab === 'downloads') router.replace({ name: 'downloads' })
+})
+
+const current = computed(() => tabs.find((c) => c.id === active.value))
+const index = computed(() => tabs.findIndex((c) => c.id === active.value) + 1)
 const list = computed(() => postsByCategory(active.value))
 const countOf = (id) => posts.filter((p) => p.category === id).length
 const pad = (n) => String(n).padStart(2, '0')
@@ -28,13 +37,17 @@ const pad = (n) => String(n).padStart(2, '0')
         <p class="hero-lead">社区维护的 Alight Motion 知识库：版本差异、使用教程与站内协作说明。原始判断保留，不替作者改口。</p>
       </div>
       <div class="hero-meta" v-reveal="260">
-        <div class="meta-row" v-for="c in categories" :key="c.id">
+        <div class="meta-row" v-for="c in tabs" :key="c.id">
           <span>{{ c.label }}</span>
           <b>{{ pad(countOf(c.id)) }}</b>
         </div>
+        <router-link class="meta-row meta-row-link" :to="{ name: 'downloads' }">
+          <span>下载</span>
+          <b>{{ pad(downloads.length) }}</b>
+        </router-link>
         <div class="meta-row">
           <span>Total</span>
-          <b>{{ pad(posts.length) }}</b>
+          <b>{{ pad(posts.length + downloads.length) }}</b>
         </div>
       </div>
     </section>

@@ -15,8 +15,15 @@ const activeTab = computed(() => {
   return categories.some((c) => c.id === t) ? t : 'tutorial'
 })
 
+const onDownloads = computed(() => route.name === 'downloads')
+
 function navTo(id) {
   keyword.value = ''
+  // 「下载」是独立页面（卡片列表），不是文章分类流
+  if (id === 'downloads') {
+    router.push({ name: 'downloads' })
+    return
+  }
   router.push({ name: 'home', query: id === 'tutorial' ? {} : { tab: id } })
 }
 
@@ -58,7 +65,7 @@ function openPost(id) {
           v-for="(c, i) in categories"
           :key="c.id"
           class="nav-item"
-          :class="{ active: c.id === activeTab }"
+          :class="{ active: c.id === activeTab || (c.id === 'downloads' && onDownloads) }"
           href="#"
           @click.prevent="navTo(c.id)"
         >

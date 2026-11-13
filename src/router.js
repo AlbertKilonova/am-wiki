@@ -9,9 +9,19 @@ export default createRouter({
     { path: '/', name: 'home', component: HomeView },
     { path: '/post/:id', name: 'post', component: PostView, props: true },
     {
+      path: '/downloads',
+      name: 'downloads',
+      component: () => import('./views/DownloadsView.vue'),
+    },
+    {
       path: '/cms',
       name: 'cms',
       component: () => import('./views/CmsView.vue'),
+    },
+    {
+      path: '/cms/downloads',
+      name: 'cms-downloads',
+      component: () => import('./views/DownloadCmsView.vue'),
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

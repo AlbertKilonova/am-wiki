@@ -12,7 +12,7 @@ const files = import.meta.glob('/content/**/*.md', {
 })
 
 /** 解析极简 frontmatter（--- ... ---），支持字符串 / 布尔 / 方括号数组 */
-function parseFrontmatter(raw) {
+export function parseFrontmatter(raw) {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(raw)
   if (!match) return { data: {}, body: raw.trim() }
 
@@ -49,7 +49,9 @@ function fileMeta(path) {
   return m ? { dir: m[1], slug: m[2] } : { dir: '', slug: path }
 }
 
+// content/02-downloads/ 是下载条目（结构化字段），不进文章流
 export const posts = Object.entries(files)
+  .filter(([path]) => !path.includes('/content/02-downloads/'))
   .map(([path, raw]) => {
     const { dir, slug } = fileMeta(path)
     const { data, body } = parseFrontmatter(raw)
