@@ -3,19 +3,13 @@ export const categories = [
   {
     id: 'tutorial',
     label: '教程',
-    desc: '入门、改版差异、编辑指南',
+    desc: '版本差异与改版对比',
     dir: '01-tutorial',
-  },
-  {
-    id: 'downloads',
-    label: '下载',
-    desc: '版本获取与安装说明',
-    dir: '02-downloads',
   },
   {
     id: 'contributions',
     label: '贡献',
-    desc: '投稿、纠错与协作说明',
+    desc: 'CMS 教程、投稿与纠错',
     dir: '03-contributions',
   },
 ]

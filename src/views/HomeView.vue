@@ -25,7 +25,7 @@ const pad = (n) => String(n).padStart(2, '0')
           <span class="line"><span class="line-inner">Alight</span></span>
           <span class="line"><span class="line-inner accent">Motion Wiki</span></span>
         </h1>
-        <p class="hero-lead">社区维护的 Alight Motion 知识库：版本差异、使用教程、下载与安装说明。原始判断保留，不替作者改口。</p>
+        <p class="hero-lead">社区维护的 Alight Motion 知识库：版本差异、使用教程与站内协作说明。原始判断保留，不替作者改口。</p>
       </div>
       <div class="hero-meta" v-reveal="260">
         <div class="meta-row" v-for="c in categories" :key="c.id">

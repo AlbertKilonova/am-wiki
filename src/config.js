@@ -21,7 +21,7 @@ export const site = {
   // 生产域名；末尾统一带斜杠
   url: (env.VITE_SITE_URL || 'https://amw.mtga.top/').replace(/\/+$/, '/'),
   description:
-    'Alight Motion 中文知识库：教程、版本对照与下载渠道，由社区以 Pull Request 维护。',
+    'Alight Motion 中文知识库：版本差异、使用教程与站内协作说明，由社区以 Pull Request 维护。',
 }
 
 /** 内容文件在仓库里的路径 */
