@@ -1,4 +1,12 @@
-# Cloudflare Pages 项目（wrangler pages deploy 用；Git 集成方式不需要本文件也能部署）
+# Cloudflare Workers（静态资产）项目配置
+# 本项目在 Cloudflare 上以 Workers + Static Assets 方式托管，
+# 构建产物 dist/ 由 wrangler deploy 上传；Pages 方式见 package.json 的 deploy:pages。
 name = "am-wiki"
-pages_build_output_dir = "dist"
 compatibility_date = "2026-11-01"
+
+[observability]
+enabled = false
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"

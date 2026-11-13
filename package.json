@@ -12,7 +12,9 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "validate": "node scripts/validate-content.mjs",
-    "deploy": "bash scripts/deploy-cloudflare.sh"
+    "deploy": "wrangler deploy",
+    "deploy:pages": "wrangler pages deploy dist --project-name=am-wiki --branch=main",
+    "deploy:local": "bash scripts/deploy-cloudflare.sh"
   },
   "dependencies": {
     "marked": "^15.0.0",
