@@ -10,7 +10,7 @@ Vue 3 + Vite 单页应用，**没有后端、没有数据库**。
 ## 工作流
 
 ```
-访客/编辑 ──► #/cms（纯前端编辑器）
+访客/编辑 ──► #/cms（文章） / #/cms/downloads（下载条目，纯前端编辑器）
                  ├─ A. GitHub 网页新建（免 Token，预填内容 → fork/分支 → PR）
                  └─ B. 细粒度 PAT 直连 GitHub API（一键建分支 + 提 PR）
                                    │
@@ -24,9 +24,9 @@ PR 打开 ──► ci.yml：校验 frontmatter + 构建（失败红叉，产物
 ```
 am-wiki/
 ├─ content/                     ← 内容（构建时读取）
-│  ├─ 01-tutorial/
-│  ├─ 02-downloads/
-│  └─ 03-contributions/
+│  ├─ 01-tutorial/              文章：教程
+│  ├─ 02-downloads/             下载条目：一个改版一个 .md，字段即 frontmatter
+│  └─ 03-contributions/         文章：贡献与协作
 ├─ public/                      ← 原样拷进 dist 的静态资产
 │  ├─ _headers                  ← 响应头（安全头 + 缓存策略）
 │  ├─ 404.html                  ← 兜底页
@@ -34,9 +34,11 @@ am-wiki/
 ├─ src/
 │  ├─ config.js                 仓库与站点配置（环境变量 VITE_REPO_* 覆盖）
 │  ├─ lib/github.js             浏览器直连 GitHub API：建分支/写文件/开 PR
+│  ├─ lib/useToken.js           Token 状态机（文章 CMS 与下载 CMS 共用）
 │  ├─ data/categories.js        分类 ↔ 目录映射
-│  ├─ data/posts.js             import.meta.glob 读取 content/**/*.md
-│  ├─ views/                    Home / Post / Cms
+│  ├─ data/posts.js             import.meta.glob 读取 content/**/*.md（排除 02-downloads）
+│  ├─ data/downloads.js         下载条目：名称 / 版本 / 链接 / 图片 / 简介
+│  ├─ views/                    Home / Post / Cms / Downloads / DownloadCms
 │  ├─ directives/reveal.js      滚动揭示
 │  └─ styles.css                瑞士国际主义 + 工业风 + 动效
 ├─ scripts/
@@ -85,6 +87,31 @@ not_found_handling = "single-page-application"
 自定义域 `amw.mtga.top` 在项目「域 → 添加域名 → mtga.top → 子域 amw」绑定，CF 自动写 DNS 记录与证书。
 
 环境变量是**构建期**变量，改完要重新构建才生效。未设置 `VITE_REPO_*` 时站点照常浏览，`#/cms` 会显示 `REPO_NOT_SET` 提示条。
+
+## 下载页与下载 CMS
+
+「下载」是独立页面（`#/downloads`），卡片流，不用文章模板。每张卡只维护五个字段：
+
+| 字段 | frontmatter | 说明 |
+| --- | --- | --- |
+| 名称 | `title` | 必填，卡片标题 |
+| 版本 | `version` | 可空，显示为版本标签 |
+| 下载链接 | `url` | 可空，填了才有「下载 ↗」按钮 |
+| 图片 | `image` | 可空，外链图；空着显示两位编号 |
+| 简介 | `summary` | 一句话说明这个改版是什么、适合谁 |
+
+专用后台在 **`#/cms/downloads`**：左侧字段、右侧实时预览，提交同样是「建分支 → 写文件 → 开 PR」；没有 Token 时可用「GitHub 网页新建 / 复制 / 下载 .md」。
+
+```md
+---
+title: AlightMotion Mix3
+version: 4.2.3            # 可空
+date: 2026-11-13
+summary: 同为柠檬制作，优化更好，对低配机友好。
+url: https://example.com/mix3.apk   # 可空
+image: https://example.com/mix3.jpg # 可空
+---
+```
 
 ## 加文章（三种方式）
 
