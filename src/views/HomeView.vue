@@ -1,0 +1,72 @@
+<script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { categories, posts, postsByCategory } from '../data/posts'
+
+const route = useRoute()
+
+const active = computed(() => {
+  const t = route.query.tab
+  return categories.some((c) => c.id === t) ? t : 'tutorial'
+})
+
+const current = computed(() => categories.find((c) => c.id === active.value))
+const index = computed(() => categories.findIndex((c) => c.id === active.value) + 1)
+const list = computed(() => postsByCategory(active.value))
+const countOf = (id) => posts.filter((p) => p.category === id).length
+const pad = (n) => String(n).padStart(2, '0')
+</script>
+
+<template>
+  <main>
+    <section class="hero">
+      <div>
+        <h1 class="hero-title">
+          <span class="line"><span class="line-inner">Alight</span></span>
+          <span class="line"><span class="line-inner accent">Motion Wiki</span></span>
+        </h1>
+        <p class="hero-lead">社区维护的 Alight Motion 知识库：版本差异、使用教程、下载与安装说明。原始判断保留，不替作者改口。</p>
+      </div>
+      <div class="hero-meta" v-reveal="260">
+        <div class="meta-row" v-for="c in categories" :key="c.id">
+          <span>{{ c.label }}</span>
+          <b>{{ pad(countOf(c.id)) }}</b>
+        </div>
+        <div class="meta-row">
+          <span>Total</span>
+          <b>{{ pad(posts.length) }}</b>
+        </div>
+      </div>
+    </section>
+
+    <div class="section-head" v-reveal="120">
+      <span class="no">{{ pad(index) }}</span>
+      <h2>{{ current.label }}</h2>
+      <span class="count">{{ pad(list.length) }} ENTRIES</span>
+    </div>
+    <p class="section-desc" v-reveal="160">{{ current.desc }}</p>
+
+    <div class="rows">
+      <router-link
+        v-for="(p, i) in list"
+        :key="p.id"
+        class="row"
+        v-reveal="220 + i * 90"
+        :to="{ name: 'post', params: { id: p.id } }"
+      >
+        <div class="row-index">{{ pad(i + 1) }}</div>
+        <div>
+          <h3 class="row-title">{{ p.title }}</h3>
+          <p class="row-desc">{{ p.summary }}</p>
+          <div class="row-tags">
+            <span class="tag" v-for="t in p.tags" :key="t">{{ t }}</span>
+            <span v-if="p.placeholder" class="tag flag">待补充</span>
+          </div>
+        </div>
+        <div class="row-date">{{ p.date }}</div>
+      </router-link>
+    </div>
+
+    <div v-if="!list.length" class="empty">NO ENTRIES</div>
+  </main>
+</template>

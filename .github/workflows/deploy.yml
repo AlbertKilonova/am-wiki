@@ -1,0 +1,47 @@
+name: Deploy to Cloudflare Pages
+
+# 默认流程是「Cloudflare Pages 直连 GitHub 仓库」：push main 由 CF 自己构建，不需要本 workflow。
+# 本文件是备用通道（直传 / 无 Git 集成时手动触发），需要仓库 secrets：
+#   CLOUDFLARE_API_TOKEN  —— 权限 Pages: Edit
+#   CLOUDFLARE_ACCOUNT_ID —— 账号 ID
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cf-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: 构建并直传 Pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --no-frozen-lockfile
+
+      - name: 校验内容
+        run: node scripts/validate-content.mjs
+
+      - name: 构建
+        run: pnpm run build
+
+      - name: 直传 Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=am-wiki --branch=main

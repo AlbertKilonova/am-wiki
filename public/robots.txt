@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /cms
+
+Sitemap: https://amw.mtga.top/sitemap.xml

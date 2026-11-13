@@ -1,0 +1,4 @@
+# Cloudflare Pages 项目（wrangler pages deploy 用；Git 集成方式不需要本文件也能部署）
+name = "am-wiki"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-11-01"

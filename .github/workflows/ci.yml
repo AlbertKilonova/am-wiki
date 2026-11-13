@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: 校验内容并构建
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --no-frozen-lockfile
+
+      - name: 校验 content/ 下的 Markdown
+        run: node scripts/validate-content.mjs
+
+      - name: 构建
+        run: pnpm run build
+
+      - name: 产物概览
+        run: |
+          echo "dist 大小:"; du -sh dist
+          echo "文件列表:"; ls -R dist | head -40
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-preview
+          path: dist
+          retention-days: 7

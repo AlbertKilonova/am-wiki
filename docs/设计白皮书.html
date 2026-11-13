@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AlightMotionWiki 设计白皮书</title>
+<style>
+:root{--paper:#f2f1ec;--ink:#121212;--soft:#4a4a46;--accent:#e2231a;--rule:#121212;--rule-soft:rgba(18,18,18,.16)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.7 "Helvetica Neue",Helvetica,Arial,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:820px;margin:0 auto;padding:48px 28px 80px}
+.doc-head{border-bottom:2px solid var(--rule);padding-bottom:18px;margin-bottom:32px}
+.doc-head .kicker{font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--accent)}
+.doc-head h1{font-size:40px;line-height:1.05;letter-spacing:-.04em;margin:10px 0 8px;text-transform:uppercase}
+.doc-head .meta{font:11px/1.6 ui-monospace,Menlo,monospace;letter-spacing:.06em;color:var(--soft);text-transform:uppercase}
+h2{font-size:22px;letter-spacing:-.03em;margin:44px 0 12px;padding-top:14px;border-top:2px solid var(--rule)}
+h3{font-size:16px;margin:26px 0 10px;letter-spacing:-.01em}
+p,li{font-size:14px;line-height:1.8}
+ul,ol{padding-left:22px}
+li{margin:5px 0}
+li::marker{color:var(--accent)}
+strong{font-weight:750}
+code{font:12.5px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--rule-soft);padding:1px 4px}
+pre{background:transparent;border:1px solid var(--rule);padding:14px;overflow:auto;font:12.5px/1.6 ui-monospace,Menlo,monospace}
+pre code{border:0;padding:0}
+blockquote{margin:18px 0;padding:2px 0 2px 16px;border-left:3px solid var(--accent);color:var(--soft);font-size:13px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12.5px}
+th,td{border:1px solid var(--rule-soft);padding:8px 10px;text-align:left;vertical-align:top}
+th{border-bottom:2px solid var(--rule);font:700 10.5px/1.4 ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase}
+hr{border:0;border-top:1px solid var(--rule);margin:36px 0}
+a{color:var(--accent)}
+.foot{margin-top:56px;padding-top:16px;border-top:2px solid var(--rule);font:10.5px/1.6 ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--soft)}
+@media print{body{background:#fff}.wrap{padding:0 0 24px}h2{break-after:avoid}pre,table,blockquote{break-inside:avoid}.foot{margin-top:32px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="doc-head">
+    <div class="kicker">Design Whitepaper / v2.0</div>
+    <h1>AlightMotionWiki<br>设计白皮书</h1>
+    <div class="meta">无后端静态 Wiki 的内容生产体系 · 2026-11-13 · 瑞士国际主义 + 工业风</div>
+  </div>
+  <h1>AlightMotionWiki 设计白皮书</h1>
+<blockquote>
+<p>版本 2.0 · 2026-11-13
+主题：无后端静态 Wiki 的内容生产体系
+站点：AlightMotionWiki（社区维护的 Alight Motion 知识库）</p>
+</blockquote>
+<hr>
+<h2>1. 摘要</h2>
+<p>本次重建把一份仅剩 HTML 骨架的旧社区站点，重建为：</p>
+<ul>
+<li><strong>纯静态</strong>的 Vue 3 单页应用（无服务端、无数据库、无运行时依赖）</li>
+<li>内容以 <strong>Markdown 文件</strong>为唯一真相源，<strong>构建时</strong>打包进产物</li>
+<li>编辑通过 <strong>浏览器内 CMS</strong> 完成，提交形式是 <strong>GitHub Pull Request</strong></li>
+<li>质量门禁与部署交给 <strong>GitHub Actions</strong></li>
+</ul>
+<p>一句话概括设计目标：<strong>让&quot;改内容&quot;变成一次可审阅、可回滚、可自动验证的 PR，同时不养任何服务器。</strong></p>
+<hr>
+<h2>2. 目标与非目标</h2>
+<h3>2.1 目标</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>目标</th>
+<th>验收标准</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>G1</td>
+<td>零服务器运维</td>
+<td>仓库之外没有任何需要维护的进程/数据库/密钥服务</td>
+</tr>
+<tr>
+<td>G2</td>
+<td>内容即文件</td>
+<td>每篇文章 = 一个 <code>.md</code>，可被 git 完整追踪</td>
+</tr>
+<tr>
+<td>G3</td>
+<td>编辑可在线</td>
+<td>无需本地环境，浏览器即可新建/修改并发起 PR</td>
+</tr>
+<tr>
+<td>G4</td>
+<td>变更可审核</td>
+<td>任何内容改动都经过 PR，PR 内可见 diff 与构建结果</td>
+</tr>
+<tr>
+<td>G5</td>
+<td>构建可验证</td>
+<td>frontmatter 不合法 / 构建失败时 PR 直接变红</td>
+</tr>
+<tr>
+<td>G6</td>
+<td>阅读端体验</td>
+<td>移动端优先、深浅主题、搜索、动效克制</td>
+</tr>
+<tr>
+<td>G7</td>
+<td>可访问性</td>
+<td>支持 <code>prefers-reduced-motion</code>，语义结构清晰</td>
+</tr>
+</tbody></table>
+<h3>2.2 非目标</h3>
+<ul>
+<li>不做用户系统、评论、点赞（需要服务端或第三方）</li>
+<li>不做站内图片上传（仓库体积与 clone 成本）</li>
+<li>不做多人实时协同编辑</li>
+<li>不做服务端搜索索引（文章规模 &lt; 100 时前端内存搜索足够）</li>
+</ul>
+<hr>
+<h2>3. 信息架构</h2>
+<pre><code>站点
+├─ 首页（分类导航 + 列表）
+│   ├─ 01 教程        content/01-tutorial/
+│   ├─ 02 下载        content/02-downloads/
+│   └─ 03 贡献        content/03-contributions/
+├─ 文章页            #/post/&lt;id&gt;
+├─ 内容编辑器        #/cms（懒加载，不进主包）
+└─ 详情辅助
+    ├─ 全站搜索（标题/摘要/正文/标签）
+    ├─ 上下篇
+    └─ 「GITHUB ↗」直达仓库编辑页
+</code></pre>
+<p>分类与目录的映射集中在一个地方（<code>src/data/categories.js</code>）：</p>
+<pre><code class="language-js">{ id: &#39;tutorial&#39;, label: &#39;教程&#39;, desc: &#39;...&#39;, dir: &#39;01-tutorial&#39; }
+</code></pre>
+<ul>
+<li><strong>id</strong> 用于路由与 URL</li>
+<li><strong>dir</strong> 决定 <code>content/</code> 下的目录，前缀数字决定导航顺序</li>
+<li>新增分类 = 加一个数组项 + 建目录，无需改组件</li>
+</ul>
+<hr>
+<h2>4. 内容模型</h2>
+<h3>4.1 文件格式</h3>
+<p>每篇文章为一个 Markdown 文件，头部是极简 frontmatter：</p>
+<pre><code class="language-md">---
+title: 版本介绍及下载安装
+date: 2026-01-03
+tags: [Alight Motion, 改版, 入门]
+summary: 一句话摘要，显示在列表里
+# placeholder: true   # 可选：显示「待补充」
+# id: versions        # 可选：默认取文件名
+---
+
+正文（完整 Markdown）
+</code></pre>
+<h3>4.2 字段约束</h3>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>必填</th>
+<th>类型</th>
+<th>校验规则（<code>scripts/validate-content.mjs</code>）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>title</code></td>
+<td>是</td>
+<td>string</td>
+<td>非空</td>
+</tr>
+<tr>
+<td><code>date</code></td>
+<td>是</td>
+<td><code>YYYY-MM-DD</code></td>
+<td>正则 + <code>Date.parse</code> 合法性</td>
+</tr>
+<tr>
+<td><code>summary</code></td>
+<td>否</td>
+<td>string</td>
+<td>缺失时告警（列表会空）</td>
+</tr>
+<tr>
+<td><code>tags</code></td>
+<td>否</td>
+<td><code>[a, b]</code></td>
+<td>必须是数组语法</td>
+</tr>
+<tr>
+<td><code>placeholder</code></td>
+<td>否</td>
+<td>boolean</td>
+<td>只接受 <code>true</code>/<code>false</code></td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td>否</td>
+<td>string</td>
+<td>全局唯一，缺省取文件名</td>
+</tr>
+</tbody></table>
+<h3>4.3 为什么不用 JSON/YAML 数据文件</h3>
+<ul>
+<li>JSON 里写多段 Markdown 需要转义换行，diff 可读性差</li>
+<li><code>.md</code> 文件让非技术贡献者能直接读、直接改，GitHub 网页编辑器原生支持预览</li>
+<li>目录即分类，文件名即 slug，减少一层映射的心智负担</li>
+</ul>
+<hr>
+<h2>5. 构建管线</h2>
+<h3>5.1 构建时读取，而非运行时请求</h3>
+<pre><code class="language-js">// src/data/posts.js
+const files = import.meta.glob(&#39;/content/**/*.md&#39;, {
+  query: &#39;?raw&#39;,   // 原样读文本
+  import: &#39;default&#39;,
+  eager: true,     // 构建时全部内联
+})
+</code></pre>
+<ul>
+<li><strong>eager + ?raw</strong> 让 Vite 在构建阶段把每个 md 的文本内联进 bundle</li>
+<li>浏览器打开站点时<strong>没有任何内容请求</strong>：首屏只有一个 JS + 一个 CSS</li>
+<li>frontmatter 解析发生在模块初始化（一次性，成本可忽略）</li>
+<li>代价：内容变更必须重新构建（这与 PR 工作流天然契合）</li>
+</ul>
+<h3>5.2 排序与检索</h3>
+<ul>
+<li>排序：<code>date</code> 降序，同日期按 <code>id</code></li>
+<li>搜索：把 <code>title + summary + body + tags</code> 拼成小写串做 <code>includes</code>；文章量在百级以内时内存搜索的延迟远低于网络请求</li>
+</ul>
+<h3>5.3 构建脚本（手机环境适配）</h3>
+<p><code>/sdcard</code> 是 FUSE 挂载，<strong>不支持 pnpm 需要的符号链接</strong>。因此 <code>build.sh</code> 采用：</p>
+<pre><code>/sdcard/.../am-wiki  ──复制 src/ content/ 配置──►  /root/build/am-wiki
+                                                        │ pnpm install + vite build
+                                                        ▼
+                          dist/  ◄────复制回来────  /root/build/am-wiki/dist
+</code></pre>
+<p>CI 上不存在这个限制，直接 <code>pnpm run build</code> 即可。</p>
+<hr>
+<h2>6. 无后端 CMS 设计</h2>
+<h3>6.1 方案对比</h3>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>是否需要后端</th>
+<th>用户门槛</th>
+<th>安全面</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GitHub OAuth App</td>
+<td>需 OAuth 代理（secret 不能进前端）</td>
+<td>低</td>
+<td>中</td>
+<td>多人规模再上</td>
+</tr>
+<tr>
+<td><strong>细粒度 PAT 直连 API</strong></td>
+<td>不需要</td>
+<td>中（建一次 token）</td>
+<td>中（可限定单仓库）</td>
+<td><strong>采用（维护者通道）</strong></td>
+</tr>
+<tr>
+<td><strong>GitHub 网页预填链接</strong></td>
+<td>不需要</td>
+<td>低（有 GitHub 账号即可）</td>
+<td>高（不接触 token）</td>
+<td><strong>采用（公众通道）</strong></td>
+</tr>
+<tr>
+<td>Issue → Action 自动 PR</td>
+<td>不需要</td>
+<td>低</td>
+<td>高</td>
+<td>路线图</td>
+</tr>
+<tr>
+<td>第三方托管 CMS（Decap/Pages CMS）</td>
+<td>不需要</td>
+<td>低</td>
+<td>依赖第三方</td>
+<td>备选</td>
+</tr>
+</tbody></table>
+<h3>6.2 双通道设计</h3>
+<p><strong>通道 A：GitHub 网页新建（免 Token）</strong></p>
+<pre><code>CMS 组装 markdown
+      │
+      ▼
+https://github.com/&lt;owner&gt;/&lt;repo&gt;/new/&lt;branch&gt;?filename=&lt;path&gt;&amp;value=&lt;urlencode(markdown)&gt;
+      │
+      ▼
+GitHub 网页编辑器已预填 → 用户点「Create a new branch」→「Propose changes」→ PR
+</code></pre>
+<ul>
+<li>没有仓库写权限的访客会被 GitHub 引导 <strong>fork → 分支 → PR</strong>，属于标准 OSS 协作路径</li>
+<li>限制：<code>/new</code> 支持预填，<code>/edit</code> 不支持 → 编辑已存在文件时提供「复制 Markdown + 打开编辑页」两步流程</li>
+</ul>
+<p><strong>通道 B：PAT 直连 API（维护者）</strong></p>
+<p>一次点击完成 5 个请求：</p>
+<pre><code>GET  /repos/{o}/{r}/git/ref/heads/main          → base sha
+POST /repos/{o}/{r}/git/refs                    → refs/heads/cms/&lt;slug&gt;-&lt;stamp&gt;
+GET  /repos/{o}/{r}/contents/&lt;path&gt;?ref=&lt;branch&gt;→ 是否存在（取 sha）
+PUT  /repos/{o}/{r}/contents/&lt;path&gt;             → utf-8 → base64 提交
+POST /repos/{o}/{r}/pulls                       → PR（base=main, head=cms/...）
+</code></pre>
+<p>设计要点：</p>
+<ul>
+<li>分支名强制 <strong>ASCII</strong>（<code>cms/x-mweq660</code>），避免中文 ref 在 CI/工具链中的兼容问题</li>
+<li>中文正文用 <code>TextEncoder</code> + 分块 <code>String.fromCharCode</code> 转 base64（<code>btoa</code> 不能直接处理 Unicode）</li>
+<li>错误信息落到 UI：401/403/404/422 分别提示权限、仓库名、路径、校验</li>
+<li>整个流程<strong>没有任何服务器参与</strong>，token 只在本机内存/存储中</li>
+</ul>
+<h3>6.3 Token 安全模型</h3>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>决策</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>权限</td>
+<td>Fine-grained，仅本仓库：<code>Contents: RW</code> + <code>Pull requests: RW</code> + <code>Metadata: R</code></td>
+</tr>
+<tr>
+<td>存储</td>
+<td>默认 <code>sessionStorage</code>（关标签页即失效）；勾选「记住设备」才写 <code>localStorage</code></td>
+</tr>
+<tr>
+<td>展示</td>
+<td>输入框 <code>type=password</code>，任何日志/错误信息不回显 token</td>
+</tr>
+<tr>
+<td>页面</td>
+<td>加 CSP，<code>script-src &#39;self&#39;</code>、<code>connect-src &#39;self&#39; https://api.github.com</code></td>
+</tr>
+<tr>
+<td>第三方脚本</td>
+<td><strong>禁止</strong>（统计、字体 CDN 都不加），消除 token 侧信道</td>
+</tr>
+<tr>
+<td>撤销</td>
+<td>UI 一键清除 + README 说明 GitHub 侧撤销</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>残余风险：若站点自身存在 XSS，token 可被读取。当前站点无用户输入回显、无第三方脚本、CSP 收紧，攻击面极小；这也是&quot;坚持零第三方依赖&quot;的原因之一。</p>
+</blockquote>
+<hr>
+<h2>7. CI/CD 与质量门禁</h2>
+<pre><code>PR 打开 ──► ci.yml
+             ├─ pnpm install
+             ├─ node scripts/validate-content.mjs   ← frontmatter/分类/id 校验
+             ├─ pnpm run build                      ← 构建必须通过
+             └─ upload-artifact(dist-preview, 7d)
+
+合并 main ──► deploy.yml
+              ├─ 同上校验 + 构建
+              ├─ configure-pages
+              ├─ upload-pages-artifact(dist)
+              └─ deploy-pages → https://&lt;owner&gt;.github.io/&lt;repo&gt;/
+</code></pre>
+<ul>
+<li>门禁的<strong>唯一真理</strong>是仓库状态：main 永远等于线上</li>
+<li>失败即红叉，审阅者可以只凭 PR 状态决定合不合</li>
+<li>后续可加：<code>pr-preview-action</code>（把 PR 构建发到 <code>gh-pages/previews/pr-N/</code>）、链接检查、拼写检查</li>
+</ul>
+<hr>
+<h2>8. 视觉系统：瑞士国际主义 + 工业风</h2>
+<h3>8.1 设计原则</h3>
+<ol>
+<li><strong>网格先于装饰</strong>：12 栏网格用极淡竖线显式画出，所有内容贴网格</li>
+<li><strong>字体即层级</strong>：只用一套无衬线（Helvetica/Arial），通过字重、字号、字距建立层级</li>
+<li><strong>三色系统</strong>：纸白 <code>#F2F1EC</code> / 墨黑 <code>#121212</code> / 信号红 <code>#E2231A</code>，红只用于编号与强调</li>
+<li><strong>零圆角、零渐变、零阴影</strong>：用 1px 发丝线与 2px 粗线分隔</li>
+<li><strong>编号系统</strong>：导航 <code>01/02/03</code>、列表项两位置编号、文章 <code>h2</code> 自动 <code>01/02/03</code>（CSS counter）</li>
+<li><strong>左对齐 + 大留白</strong>：不做居中排版，标题可以压到很大</li>
+</ol>
+<h3>8.2 Token 表</h3>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>浅色</th>
+<th>深色</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>--paper</code></td>
+<td><code>#F2F1EC</code></td>
+<td><code>#101010</code></td>
+<td>背景</td>
+</tr>
+<tr>
+<td><code>--ink</code></td>
+<td><code>#121212</code></td>
+<td><code>#F0EFE9</code></td>
+<td>正文</td>
+</tr>
+<tr>
+<td><code>--accent</code></td>
+<td><code>#E2231A</code></td>
+<td><code>#FF3B30</code></td>
+<td>编号/强调</td>
+</tr>
+<tr>
+<td><code>--rule</code></td>
+<td><code>#121212</code></td>
+<td><code>#F0EFE9</code></td>
+<td>分隔线</td>
+</tr>
+<tr>
+<td><code>--grid</code></td>
+<td>5.5% 透明</td>
+<td>6% 透明</td>
+<td>栏线</td>
+</tr>
+</tbody></table>
+<h3>8.3 组件规则</h3>
+<ul>
+<li><strong>页眉</strong>：品牌左 / 编号导航中 / 搜索与主题开关右，底部 2px 墨线；窄屏导航折为第二行</li>
+<li><strong>Hero</strong>：巨型大写标题 + 右侧等宽统计（分类计数/总数），底部 1px 线</li>
+<li><strong>列表行</strong>：<code>编号 | 标题+摘要+标签 | 日期</code>，hover 整行反白</li>
+<li><strong>文章</strong>：面包屑 <code>INDEX / 01 教程 / ID</code>，标题 52px，<code>h2</code> 带等宽序号与顶部细线</li>
+<li><strong>按钮/输入</strong>：矩形、1px 边框、等宽大写标签</li>
+</ul>
+<hr>
+<h2>9. 动效系统</h2>
+<p>原则：<strong>方向一致、无弹跳、只做一次</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>实现</th>
+<th>参数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>首页标题</td>
+<td>每行遮罩（<code>overflow:hidden</code> + 内层 <code>translateY(112%→0)</code>）</td>
+<td>0.9s <code>cubic-bezier(.16,1,.3,1)</code>，两行错开 100ms</td>
+</tr>
+<tr>
+<td>路由切换</td>
+<td>旧页淡出，新页下移 18px + <code>clip-path</code> 上滑揭开</td>
+<td>出 0.18s / 入 0.42s，<code>mode=&quot;out-in&quot;</code></td>
+</tr>
+<tr>
+<td>滚动揭示</td>
+<td><code>IntersectionObserver</code> + <code>.reveal</code>（透明度/位移/clip-path）</td>
+<td>0.65s，列表 stagger 90ms</td>
+</tr>
+<tr>
+<td>搜索浮层</td>
+<td>从顶部 <code>clip-path: inset(0 0 100% 0)</code> 拉开</td>
+<td>0.3s</td>
+</tr>
+<tr>
+<td>导航下划线</td>
+<td><code>scaleX(0→1)</code>，原点在左</td>
+<td>0.26s</td>
+</tr>
+<tr>
+<td>文章 <code>h2</code> 细线</td>
+<td>伪元素 <code>scaleX</code> 展开</td>
+<td>0.7s</td>
+</tr>
+</tbody></table>
+<ul>
+<li>正文由 <code>v-html</code> 生成，挂不上指令 → 提供 <code>revealChildren()</code> 对子节点批量观察</li>
+<li>全部动效在 <code>prefers-reduced-motion: reduce</code> 下被压缩为 0.001ms</li>
+<li>用 <code>will-change</code> 限于揭示元素，避免常驻合成层</li>
+</ul>
+<hr>
+<h2>10. 性能与体积</h2>
+<table>
+<thead>
+<tr>
+<th>产物</th>
+<th>体积</th>
+<th>gzip</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>index.js</code>（主包）</td>
+<td>~155 KB</td>
+<td>~60 KB</td>
+</tr>
+<tr>
+<td><code>index.css</code></td>
+<td>~19 KB</td>
+<td>~5 KB</td>
+</tr>
+<tr>
+<td><code>CmsView.js</code>（懒加载）</td>
+<td>~13 KB</td>
+<td>~5 KB</td>
+</tr>
+</tbody></table>
+<ul>
+<li>CMS 走动态 <code>import()</code>，普通读者不会下载编辑器代码</li>
+<li>无字体文件、无图片依赖、无第三方脚本</li>
+<li>无运行时数据请求，首屏一次请求即完成</li>
+<li>图片走外链图床，不占产物体积</li>
+</ul>
+<hr>
+<h2>11. 安全与可访问性</h2>
+<h3>11.1 安全</h3>
+<ul>
+<li><strong>CSP</strong>：<code>default-src &#39;self&#39;; script-src &#39;self&#39;; connect-src &#39;self&#39; https://api.github.com; form-action &#39;none&#39;</code></li>
+<li><strong>无第三方脚本</strong>：消除供应链面</li>
+<li><strong>Token 最小权限</strong>：单仓库、仅内容与 PR 权限</li>
+<li><strong>内容可信边界</strong>：Markdown 由审阅者过目；<code>v-html</code> 渲染的是仓库内文件，不接受用户输入注入</li>
+</ul>
+<h3>11.2 可访问性</h3>
+<ul>
+<li>语义标签（<code>header/nav/main/article/footer</code>）、<code>aria-label</code> 覆盖搜索与主题按钮</li>
+<li>对比度：墨黑/纸白 ≈ 17:1；红色仅用于强调，不承担正文信息</li>
+<li>键盘可达：都是原生 <code>a/button/input</code></li>
+<li>动效可关闭（系统级）</li>
+</ul>
+<hr>
+<h2>12. 风险与取舍</h2>
+<table>
+<thead>
+<tr>
+<th>风险</th>
+<th>影响</th>
+<th>缓解</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>编辑者嫌 GitHub 流程麻烦</td>
+<td>贡献量下降</td>
+<td>A 通道尽量少点击；后续接 Issue 模板</td>
+</tr>
+<tr>
+<td>PAT 泄露</td>
+<td>仓库被写</td>
+<td>细粒度 + 单仓库 + 一键撤销 + CSP 收紧</td>
+</tr>
+<tr>
+<td>内容无预览</td>
+<td>排版问题合并后才看到</td>
+<td>Phase 2 加 PR 预览</td>
+</tr>
+<tr>
+<td>仓库变大</td>
+<td>clone 慢</td>
+<td>图片外链、不存二进制</td>
+</tr>
+<tr>
+<td>依赖 GitHub</td>
+<td>平台绑定</td>
+<td>内容为纯文件，可随时迁 GitLab/Pages CMS</td>
+</tr>
+<tr>
+<td>手机端构建受限（FUSE）</td>
+<td>本地构建需 <code>build.sh</code></td>
+<td>CI 是权威构建环境，本地只是预览</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>13. 路线图</h2>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>内容</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Phase 0</td>
+<td>CI 校验、Pages 部署、&quot;编辑此页&quot;入口</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td>Phase 1</td>
+<td>纯前端 CMS、双通道提交、CSP</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td>Phase 2</td>
+<td>PR 预览部署、Issue→PR 自动投稿、图片外链规范化</td>
+<td>待办</td>
+</tr>
+<tr>
+<td>Phase 3</td>
+<td>OAuth 代理（多人低门槛）、内容 schema 版本化</td>
+<td>视需求</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>14. 附录</h2>
+<h3>14.1 目录结构</h3>
+<pre><code>am-wiki/
+├─ content/                    Markdown 内容（唯一真相源）
+├─ src/
+│  ├─ config.js                仓库与站点配置
+│  ├─ lib/github.js            GitHub API 封装（建分支/写文件/开 PR）
+│  ├─ data/categories.js       分类 ↔ 目录
+│  ├─ data/posts.js            import.meta.glob 读取内容
+│  ├─ views/{Home,Post,Cms}.vue
+│  ├─ directives/reveal.js     滚动揭示
+│  ├─ router.js / App.vue / styles.css
+├─ scripts/validate-content.mjs
+├─ .github/workflows/{ci,deploy}.yml
+├─ build.sh / start.sh(已移除)
+└─ dist/
+</code></pre>
+<h3>14.2 命令速查</h3>
+<pre><code class="language-sh">pnpm install
+pnpm run validate        # 校验 content/*.md
+pnpm run build           # 构建 → dist/
+pnpm run dev             # 本地开发
+node scripts/validate-content.mjs
+</code></pre>
+<h3>14.3 部署检查清单</h3>
+<ol>
+<li><code>src/config.js</code> 填正确的 <code>owner/name/branch</code></li>
+<li>Settings → Pages → Source: <strong>GitHub Actions</strong></li>
+<li>Settings → Actions → Workflow permissions: <strong>Read and write</strong></li>
+<li>首篇 PR 合并后确认 Pages URL 生效</li>
+<li>给维护者发放 fine-grained PAT（已按第 6.3 节限定范围）</li>
+</ol>
+<hr>
+<p><em>本白皮书随实现同步维护；设计决策变更时请更新对应章节。</em></p>
+
+  <div class="foot">AlightMotionWiki · Community Maintained · Print to PDF for archive</div>
+</div>
+</body>
+</html>
